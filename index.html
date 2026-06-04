@@ -224,9 +224,12 @@
 <script>
 /* ============ DEFAULT KEY (yours; editable & stored locally) ============ */
 const DEFAULT_KEY = "cd5bcb0c47mshc997e48bd90f9b6p1cd7dcjsn37d474e5d96a";
+/* ↓↓↓  PASTE YOUR ANTHROPIC KEY BETWEEN THE QUOTES TO MAKE IT PERMANENT (it starts with sk-ant-)  ↓↓↓ */
+const DEFAULT_ANT_KEY = "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";
+/* ↑↑↑  Keep this file private — do NOT post it publicly with a key in it. Set a spend limit in the Anthropic console.  ↑↑↑ */
 let API_KEY = localStorage.getItem('jsearch_key') || DEFAULT_KEY;
-let ANTHROPIC_KEY = localStorage.getItem('anthropic_key') || "";
-let MODEL = localStorage.getItem('anthropic_model') || "claude-sonnet-4-6";
+let ANTHROPIC_KEY = localStorage.getItem('anthropic_key') || DEFAULT_ANT_KEY;
+let MODEL = localStorage.getItem('anthropic_model') || "claude-haiku-4-5-20251001";
 
 /* ============ MARKET DATA ============ */
 const markets=[

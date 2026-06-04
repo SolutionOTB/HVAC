@@ -130,7 +130,6 @@
   <h1>🔧 Commercial HVAC Job Finder</h1>
   <span class="chip">Profile: <b>Chris</b> · 20 yrs commercial HVAC installation + management</span>
   <span class="spacer"></span>
-  <button class="keybtn" id="keyBtn">⚙ Keys</button>
 </header>
 <div class="wrap">
   <div class="mapbox">
@@ -178,6 +177,7 @@
         <input id="chatInput" placeholder='Ask in plain English — e.g. "Where can I earn the most running commercial installs? Find jobs."'>
         <button class="btn" id="chatGo">Send</button>
       </div>
+      <button class="btn alt" id="testBtn" style="font-size:11px;padding:5px 9px;margin-bottom:9px">🔧 Test connection</button>
       <div id="chatlog"></div>
       <div class="interp" id="interp"></div>
       <div class="controls">
@@ -209,28 +209,6 @@
       <div id="results"></div>
     </div>
   </aside>
-</div>
-
-<!-- key modal -->
-<div class="modal" id="keyModal">
-  <div class="box">
-    <h3>Keys &amp; model</h3>
-    <p>Stored only in this browser (localStorage) — never uploaded. The <b>Anthropic key</b> powers the natural-language chat; <b>JSearch</b> supplies live postings. For a public deploy, put keys behind a serverless proxy instead of in the page.</p>
-    <label style="font-size:11px;color:var(--muted)">Anthropic API key (chat brain)</label>
-    <input id="antInput" type="password" placeholder="sk-ant-...">
-    <label style="font-size:11px;color:var(--muted);margin-top:9px;display:block">Model</label>
-    <select id="modelSel">
-      <option value="claude-sonnet-4-6">Claude Sonnet 4.6 — balanced (recommended)</option>
-      <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 — fastest / cheapest</option>
-      <option value="claude-opus-4-6">Claude Opus 4.6 — strongest reasoning</option>
-    </select>
-    <label style="font-size:11px;color:var(--muted);margin-top:9px;display:block">JSearch (RapidAPI) key</label>
-    <input id="keyInput" type="password" placeholder="your JSearch key">
-    <div class="row2">
-      <button class="btn alt" id="keyCancel">Cancel</button>
-      <button class="btn" id="keySave">Save</button>
-    </div>
-  </div>
 </div>
 
 <script>
@@ -708,10 +686,38 @@ async function runAgent(userText){
 function updateChatHint(){const h=document.getElementById('chatHint');if(!h)return;
   h.innerHTML=ANTHROPIC_KEY
     ? '🧠 Claude interprets your request, picks markets from the map, and pulls live JSearch results.'
-    : '⚠ No Anthropic key yet — using basic keyword parsing. Add a key via ⚙ Keys for full natural-language chat.';}
+    : '⚠ No Anthropic key embedded — using basic keyword parsing.';}
+
+/* ====== built-in diagnostic: tells you exactly what's wrong ====== */
+async function testConnections(){
+  document.querySelector('.tab[data-tab="search"]').click();
+  addBubble('tool','🔧 Testing both connections…');
+  // 1) Anthropic (chat brain)
+  if(!ANTHROPIC_KEY){addBubble('ai','❌ <b>Claude:</b> no key is embedded in this file.');}
+  else{
+    try{
+      const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+        headers:{'content-type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body:JSON.stringify({model:MODEL,max_tokens:1,messages:[{role:'user',content:'hi'}]})});
+      if(r.ok){addBubble('ai','✅ <b>Claude (chat):</b> connected — key & credits OK.');}
+      else{const j=await r.json().catch(()=>({}));const m=j.error&&j.error.message?j.error.message:('HTTP '+r.status);
+        const hint=r.status===400?' → usually means NO CREDITS on the account (add a few $ at console.anthropic.com → Billing).':r.status===401?' → the key was rejected (re-check it).':'';
+        addBubble('ai','❌ <b>Claude:</b> '+escapeHtml(m)+hint);}
+    }catch(e){addBubble('ai','❌ <b>Claude:</b> the request was blocked (network/CORS). This file is running as a <b>local file</b> — that\'s the problem. Host it or open it through a local web server.');}
+  }
+  // 2) JSearch (job listings)
+  try{
+    const r=await fetch(`https://jsearch.p.rapidapi.com/search?query=${encodeURIComponent('commercial HVAC in Atlanta, GA')}&page=1&num_pages=1&country=us`,
+      {headers:{'x-rapidapi-key':API_KEY,'x-rapidapi-host':'jsearch.p.rapidapi.com'}});
+    if(r.ok){const d=await r.json().catch(()=>({}));addBubble('ai',`✅ <b>JSearch (jobs):</b> connected — ${(d.data||[]).length} sample results returned.`);}
+    else{const hint=r.status===403?' → key not subscribed to JSearch on RapidAPI.':r.status===429?' → monthly free quota is used up (resets next cycle, or upgrade the plan).':'';
+      addBubble('ai','❌ <b>JSearch:</b> HTTP '+r.status+hint);}
+  }catch(e){addBubble('ai','❌ <b>JSearch:</b> the request was blocked (network/CORS) — same local-file issue as above. Host it or use a local server.');}
+}
 
 /* wire controls */
 document.getElementById('runSearch').onclick=()=>doSearch({loc:fLoc.value});
+document.getElementById('testBtn').onclick=testConnections;
 document.getElementById('chatGo').onclick=()=>{
   const v=document.getElementById('chatInput').value.trim();if(!v)return;
   if(ANTHROPIC_KEY){runAgent(v);document.getElementById('chatInput').value='';return;}
@@ -726,20 +732,6 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
   document.querySelectorAll('.pane').forEach(x=>x.classList.remove('active'));
   t.classList.add('active');document.getElementById('pane-'+t.dataset.tab).classList.add('active');
 });
-
-/* key modal */
-const km=document.getElementById('keyModal');
-document.getElementById('keyBtn').onclick=()=>{
-  document.getElementById('keyInput').value=API_KEY;
-  document.getElementById('antInput').value=ANTHROPIC_KEY;
-  document.getElementById('modelSel').value=MODEL;
-  km.classList.add('open');};
-document.getElementById('keyCancel').onclick=()=>km.classList.remove('open');
-document.getElementById('keySave').onclick=()=>{
-  API_KEY=document.getElementById('keyInput').value.trim();
-  ANTHROPIC_KEY=document.getElementById('antInput').value.trim();
-  MODEL=document.getElementById('modelSel').value;
-  km.classList.remove('open');updateChatHint();};
 
 /* init */
 selectMarket('N. Virginia (Ashburn)');

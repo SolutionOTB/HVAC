@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Commercial HVAC Job Finder — Southeast Market Map + Live Search</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#15203a; --panel2:#1c2a47; --panel3:#22325440; --text:#e8eefb; --muted:#9fb0d0;
+    --line:#2a3a5c; --accent:#38bdf8; --gold:#fbbf24; --good:#34d399; --land:#21304e; --landline:#34507e;
+    --t1:#ef4444; --t2:#f97316; --t3:#f59e0b; --t4:#3b82f6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh;overflow:hidden}
+  header{padding:11px 18px;border-bottom:1px solid var(--line);background:var(--panel);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  header h1{font-size:16px;font-weight:700;white-space:nowrap}
+  .chip{font-size:11.5px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);padding:5px 10px;border-radius:20px}
+  .chip b{color:var(--good)}
+  header .spacer{flex:1}
+  .keybtn{font-size:11.5px;color:var(--text);background:var(--panel2);border:1px solid var(--line);
+    padding:6px 11px;border-radius:7px;cursor:pointer}
+  .keybtn:hover{border-color:var(--accent)}
+  .wrap{flex:1;display:flex;min-height:0}
+  .mapbox{flex:1.25;min-width:0;position:relative;display:flex;align-items:center;justify-content:center;padding:6px}
+  svg{width:100%;height:100%}
+  .state{fill:var(--land);stroke:var(--landline);stroke-width:1}
+  .slabel{fill:#6f86b3;font-size:13px;font-weight:700;text-anchor:middle;pointer-events:none}
+  .bub{cursor:pointer}
+  .bub circle.main:hover{stroke:#fff;stroke-width:3}
+  .boomring{fill:none;stroke:var(--gold);stroke-width:2;opacity:.9}
+  .blabel{fill:#dbe6fb;font-size:9.5px;font-weight:600;text-anchor:middle;pointer-events:none;
+    paint-order:stroke;stroke:#0f172a;stroke-width:2.6px;stroke-linejoin:round}
+  .star{fill:var(--gold);pointer-events:none}
+  .maptoggle{position:absolute;top:12px;left:12px;background:#0b1322dd;border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:11.5px;z-index:6}
+  .maptoggle label{display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;color:var(--text)}
+  .maptoggle input{width:auto}
+  .projlegend{display:none;flex-direction:column;gap:3px;margin-top:7px;color:var(--muted);font-weight:500}
+  .projlegend.show{display:flex}
+  .projlegend span{display:flex;align-items:center;gap:6px}
+  .projlegend i{width:9px;height:9px;transform:rotate(45deg);display:inline-block}
+  .proj path:hover{stroke:#fff;stroke-width:1.5}
+  aside{width:430px;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+  .tabs{display:flex;border-bottom:1px solid var(--line)}
+  .tab{flex:1;text-align:center;padding:11px 6px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
+  .tab.active{color:var(--text);border-bottom-color:var(--accent)}
+  .pane{flex:1;overflow-y:auto;padding:14px;display:none}
+  .pane.active{display:block}
+  h2{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:2px 0 10px}
+  .legend{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
+  .legend span{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--muted)}
+  .dot{width:10px;height:10px;border-radius:50%}
+  .row{display:flex;align-items:center;gap:9px;padding:7px;border-radius:9px;cursor:pointer;border:1px solid transparent}
+  .row:hover,.row.active{background:var(--panel2);border-color:var(--line)}
+  .rank{width:18px;font-weight:700;color:var(--muted);font-size:12.5px;text-align:center}
+  .bar-wrap{flex:1;min-width:0}
+  .row .name{font-size:12.5px;font-weight:600;display:flex;justify-content:space-between;gap:6px;align-items:center}
+  .row .name .bz{color:var(--gold);font-size:10px}
+  .bar{height:5px;border-radius:4px;background:var(--panel2);margin-top:5px;overflow:hidden}
+  .bar i{display:block;height:100%}
+  .score{font-size:13.5px;font-weight:700;width:26px;text-align:right}
+  #detail{margin-top:14px;border-top:1px solid var(--line);padding-top:12px;display:none}
+  #detail h3{font-size:15px;display:flex;align-items:center;gap:7px}
+  #detail .sub{font-size:11.5px;color:var(--muted);margin:3px 0 9px}
+  #detail .stat{font-size:12.5px;margin:3px 0}
+  #detail .stat b{color:var(--accent)}
+  .cat{background:#2a2410;border:1px solid #5b4a16;color:#fde68a;font-size:11.5px;line-height:1.5;
+    padding:8px 10px;border-radius:8px;margin:9px 0}
+  .cat b{color:var(--gold)}
+  #detail .drv{font-size:11.5px;color:var(--muted);margin:8px 0;line-height:1.55}
+  .btnrow{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+  .btn{display:inline-block;font-size:11.5px;font-weight:600;color:#06283a;background:var(--accent);
+    padding:7px 11px;border-radius:7px;text-decoration:none;border:none;cursor:pointer}
+  .btn.alt{background:#334155;color:#fff}
+  .note{font-size:10.5px;color:var(--muted);line-height:1.55;margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
+  /* search pane */
+  .controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+  .controls label{font-size:10.5px;color:var(--muted);display:block;margin-bottom:3px}
+  .controls .full{grid-column:1/3}
+  input,select{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);
+    padding:7px 9px;border-radius:7px;font-size:12.5px;font-family:inherit}
+  input:focus,select:focus{outline:none;border-color:var(--accent)}
+  .chatbox{display:flex;gap:7px;margin:4px 0 12px}
+  .chatbox input{flex:1}
+  .interp{font-size:11px;color:var(--accent);background:#0b2233;border:1px solid #1c3a52;padding:7px 9px;border-radius:7px;margin-bottom:10px;display:none}
+  .jobcard{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:11px;margin-bottom:9px}
+  .jobcard .jt{font-size:13.5px;font-weight:700;line-height:1.3}
+  .jobcard .emp{font-size:12px;color:var(--muted);margin:2px 0 6px}
+  .jobcard .meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:7px}
+  .jobcard .pill{font-size:10.5px;background:var(--panel3);border:1px solid var(--line);padding:3px 7px;border-radius:6px;color:var(--muted)}
+  .jobcard .pill.sal{color:var(--good);border-color:#1f5f47}
+  .jobcard .match{font-size:10.5px;color:var(--gold);margin-bottom:7px;font-weight:600}
+  .status{font-size:12px;color:var(--muted);padding:10px 0;text-align:center}
+  .demoflag{font-size:10.5px;color:var(--gold);text-align:center;margin-bottom:8px;display:none}
+  .hint{font-size:10.5px;color:var(--muted);margin-bottom:8px;line-height:1.45}
+  #chatlog{margin-bottom:10px;display:flex;flex-direction:column;gap:7px}
+  .bubble{font-size:12.5px;line-height:1.5;padding:9px 11px;border-radius:10px;max-width:93%}
+  .bubble.user{background:#1c3a52;color:#dbeafe;margin-left:auto;border:1px solid #2a4a66}
+  .bubble.ai{background:var(--panel2);border:1px solid var(--line)}
+  .bubble.tool{background:#0b2233;border:1px dashed #1c3a52;color:var(--accent);font-size:11px;align-self:flex-start}
+  .ck{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);margin-top:6px}
+  .ck input{width:auto}
+  /* key modal */
+  .modal{position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center;z-index:50}
+  .modal.open{display:flex}
+  .modal .box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;width:440px;max-width:92vw}
+  .modal h3{font-size:15px;margin-bottom:8px}
+  .modal p{font-size:12px;color:var(--muted);line-height:1.55;margin-bottom:12px}
+  .modal .row2{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
+  #tip{position:absolute;pointer-events:none;background:#0b1322;border:1px solid var(--line);
+    padding:6px 9px;border-radius:7px;font-size:11.5px;display:none;white-space:nowrap;z-index:5}
+  @media(max-width:900px){.wrap{flex-direction:column}aside{width:100%;height:48%;border-left:none;border-top:1px solid var(--line)}.mapbox{height:52%}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🔧 Commercial HVAC Job Finder</h1>
+  <span class="chip">Profile: <b>Chris</b> · 20 yrs commercial HVAC installation + management</span>
+  <span class="spacer"></span>
+  <button class="keybtn" id="keyBtn">⚙ Keys</button>
+</header>
+<div class="wrap">
+  <div class="mapbox">
+    <svg id="map" viewBox="0 0 1000 560" preserveAspectRatio="xMidYMid meet"></svg>
+    <div class="maptoggle">
+      <label><input type="checkbox" id="projToggle"> ⬡ Show megaprojects</label>
+      <div class="projlegend" id="projLegend">
+        <span><i style="background:#38bdf8"></i>Data center</span>
+        <span><i style="background:#34d399"></i>EV / battery / auto</span>
+        <span><i style="background:#a78bfa"></i>Semiconductor</span>
+        <span><i style="background:#fbbf24"></i>Aerospace / corporate</span>
+      </div>
+    </div>
+    <div id="tip"></div>
+  </div>
+  <aside>
+    <div class="tabs">
+      <div class="tab active" data-tab="intel">📊 Market Intel</div>
+      <div class="tab" data-tab="search">🔎 Live Job Search</div>
+    </div>
+
+    <!-- MARKET INTEL -->
+    <div class="pane active" id="pane-intel">
+      <h2>Opportunity ranking — Southeast</h2>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--t1)"></i>Hottest 80+</span>
+        <span><i class="dot" style="background:var(--t2)"></i>High 60–79</span>
+        <span><i class="dot" style="background:var(--t3)"></i>Moderate 45–59</span>
+        <span><i class="dot" style="background:var(--t4)"></i>Lower &lt;45</span>
+        <span>⚡ = boom market</span>
+      </div>
+      <div id="list"></div>
+      <div id="detail"></div>
+      <div class="note">
+        <b>Scoring.</b> 0–100 composite of live posting demand and 2026 commercial-construction momentum (ENR starts, data-center &amp; advanced-manufacturing megaprojects, population growth). ⚡ markers flag markets driven by a named megaproject. <b>Reliability note:</b> EV/battery timelines softened in 2026 (Ford–SK split, VinFast scaled back), so data-center buildout is the steadier HVAC demand driver. Posting figures are indicative; use the Live Job Search tab for current openings.
+        <br><br><b>BLS occupation snapshot</b> (HVAC mechanics &amp; installers, SOC 49-9021): ~425,200 employed nationally · median <b>$59,810/yr ($28.75/hr)</b> · typical range $39,130–$91,020 · projected <b>+8% growth 2024–34</b> (much faster than average). Source: U.S. Bureau of Labor Statistics (OEWS May 2024 / Occupational Outlook Handbook). State averages above: Salary.com 2026.
+      </div>
+    </div>
+
+    <!-- LIVE SEARCH -->
+    <div class="pane" id="pane-search">
+      <h2>Live job search</h2>
+      <div class="hint" id="chatHint"></div>
+      <div class="chatbox">
+        <input id="chatInput" placeholder='Ask in plain English — e.g. "Where can I earn the most running commercial installs? Find jobs."'>
+        <button class="btn" id="chatGo">Send</button>
+      </div>
+      <div id="chatlog"></div>
+      <div class="interp" id="interp"></div>
+      <div class="controls">
+        <div><label>Location</label>
+          <select id="fLoc"></select></div>
+        <div><label>Role focus</label>
+          <select id="fRole">
+            <option value="commercial HVAC installer OR install manager OR HVAC foreman">Commercial install (broad)</option>
+            <option value="commercial HVAC installation manager OR HVAC project manager OR install superintendent">Management / lead roles</option>
+            <option value="commercial HVAC foreman OR lead installer">Foreman / lead installer</option>
+            <option value="commercial HVAC service manager">Service manager</option>
+            <option value="commercial HVAC installer">Installer (entry/mid)</option>
+          </select></div>
+        <div><label>Min salary</label>
+          <select id="fSal">
+            <option value="0">Any</option><option value="60000">$60k+</option>
+            <option value="80000">$80k+</option><option value="100000">$100k+</option>
+            <option value="120000">$120k+</option></select></div>
+        <div><label>Posted</label>
+          <select id="fDate">
+            <option value="all">Any time</option><option value="today">Today</option>
+            <option value="3days">Past 3 days</option><option value="week" selected>Past week</option>
+            <option value="month">Past month</option></select></div>
+        <div class="full"><button class="btn" id="runSearch" style="width:100%">Find jobs</button>
+          <label class="ck"><input type="checkbox" id="demoChk"> Use demo data (no API call)</label>
+        </div>
+      </div>
+      <div class="demoflag" id="demoFlag">Showing demo data — add your API key or run a live search.</div>
+      <div id="results"></div>
+    </div>
+  </aside>
+</div>
+
+<!-- key modal -->
+<div class="modal" id="keyModal">
+  <div class="box">
+    <h3>Keys &amp; model</h3>
+    <p>Stored only in this browser (localStorage) — never uploaded. The <b>Anthropic key</b> powers the natural-language chat; <b>JSearch</b> supplies live postings. For a public deploy, put keys behind a serverless proxy instead of in the page.</p>
+    <label style="font-size:11px;color:var(--muted)">Anthropic API key (chat brain)</label>
+    <input id="antInput" type="password" placeholder="sk-ant-...">
+    <label style="font-size:11px;color:var(--muted);margin-top:9px;display:block">Model</label>
+    <select id="modelSel">
+      <option value="claude-sonnet-4-6">Claude Sonnet 4.6 — balanced (recommended)</option>
+      <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 — fastest / cheapest</option>
+      <option value="claude-opus-4-6">Claude Opus 4.6 — strongest reasoning</option>
+    </select>
+    <label style="font-size:11px;color:var(--muted);margin-top:9px;display:block">JSearch (RapidAPI) key</label>
+    <input id="keyInput" type="password" placeholder="your JSearch key">
+    <div class="row2">
+      <button class="btn alt" id="keyCancel">Cancel</button>
+      <button class="btn" id="keySave">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ DEFAULT KEY (yours; editable & stored locally) ============ */
+const DEFAULT_KEY = "cd5bcb0c47mshc997e48bd90f9b6p1cd7dcjsn37d474e5d96a";
+let API_KEY = localStorage.getItem('jsearch_key') || DEFAULT_KEY;
+let ANTHROPIC_KEY = localStorage.getItem('anthropic_key') || "";
+let MODEL = localStorage.getItem('anthropic_model') || "claude-sonnet-4-6";
+
+/* ============ MARKET DATA ============ */
+const markets=[
+ {name:"N. Virginia (Ashburn)",st:"VA",city:"Ashburn",lat:39.04,lng:-77.49,score:95,boom:1,pay:"$30–55/hr",
+  cat:"World's largest data-center alley — 300MW+ campuses (Yondr, STACK). The single deepest mechanical/HVAC & controls market in the country.",
+  drv:"Loudoun/Ashburn anchors a national $425B/yr data-center build. Constant new hyperscale construction; premium pay for commercial install & controls.",dx:18,dy:-4},
+ {name:"Atlanta",st:"GA",city:"Atlanta",lat:33.749,lng:-84.388,score:90,boom:1,pay:"$40–64/hr",
+  cat:"ENR projects $24.3B in 2026 starts (+5%); T5 and multiple data-center campuses; SK battery plants statewide.",
+  drv:"Southeast's most diversified market. Note: several outlying GA counties passed data-center moratoriums, but the metro pipeline remains deep.",dx:2,dy:-13},
+ {name:"Nashville",st:"TN",city:"Nashville",lat:36.16,lng:-86.78,score:86,boom:0,pay:"$40–55/hr",
+  cat:null,drv:"~1.5–2% annual population growth; broad pipeline across hospitality, industrial, mixed-use & infrastructure — one of the most reliable backlogs in the region.",dx:2,dy:-13},
+ {name:"Tampa",st:"FL",city:"Tampa",lat:27.95,lng:-82.46,score:80,boom:0,pay:"$25–60/hr",
+  cat:null,drv:"Top-5 fastest-growing U.S. construction market; strong in-migration plus finance & healthcare expansion.",dx:-20,dy:4},
+ {name:"Memphis",st:"TN",city:"Memphis",lat:35.15,lng:-90.05,score:78,boom:1,pay:"$24–55/hr",
+  cat:"xAI 'Colossus' — $18B, 2GW, 555k GPUs; Colossus 2 plus a $659M expansion & a 3rd building. BlueOval City (SK On battery) ~35 mi east in Stanton.",
+  drv:"One of the biggest single-site AI/data-center buildouts in the U.S., on top of FedEx logistics. Sharp recent jump in mechanical demand.",dx:-18,dy:-4},
+ {name:"Charlotte",st:"NC",city:"Charlotte",lat:35.23,lng:-80.84,score:74,boom:0,pay:"$23–40/hr",
+  cat:null,drv:"Finance hub with steady commercial & data-center growth; the Carolinas rank among top states by construction value.",dx:8,dy:-12},
+ {name:"Miami",st:"FL",city:"Miami",lat:25.86,lng:-80.19,score:72,boom:0,pay:"$23–37/hr",
+  cat:null,drv:"Top-tier developer market — global investment, finance/tech inflow, steady population growth.",dx:14,dy:6},
+ {name:"Savannah",st:"GA",city:"Savannah",lat:32.08,lng:-81.10,score:70,boom:1,pay:"$25–45/hr",
+  cat:"Hyundai Metaplant America — $7.6B, 16M sq ft, 8,500+ on-site jobs (+4,000 supplier jobs), plus fast port-driven industrial growth.",
+  drv:"A megasite economy 25 mi from downtown; heavy industrial + supplier construction wave.",dx:16,dy:6},
+ {name:"Richmond",st:"VA",city:"Richmond",lat:37.54,lng:-77.44,score:68,boom:1,pay:"$26–43/hr",
+  cat:"Rapidly expanding suburban data-center campuses as Virginia's alley pushes south from NoVA.",
+  drv:"Spillover from the nation's densest data-center corridor; VA among top states by construction value.",dx:14,dy:2},
+ {name:"Orlando",st:"FL",city:"Orlando",lat:28.54,lng:-81.38,score:66,boom:0,pay:"$22–57/hr",
+  cat:null,drv:"Hospitality, theme-park & healthcare construction; year-round install demand.",dx:14,dy:2},
+ {name:"Raleigh–Durham",st:"NC",city:"Raleigh",lat:35.78,lng:-78.64,score:64,boom:0,pay:"$24–42/hr",
+  cat:null,drv:"Research Triangle tech & life-sciences buildout; rapid population growth.",dx:16,dy:-2},
+ {name:"Huntsville",st:"AL",city:"Huntsville",lat:34.73,lng:-86.59,score:60,boom:1,pay:"$24–48/hr",
+  cat:"Aerospace/defense expansion plus new data-center campuses — among Alabama's strongest construction pipelines.",
+  drv:"High-tech industrial base growing fast; strong skilled-trades demand.",dx:-2,dy:-12},
+ {name:"Monroe (Richland)",st:"LA",city:"Monroe",lat:32.51,lng:-92.12,score:58,boom:1,pay:"$24–42/hr",
+  cat:"Meta 'Hyperion' data center, Richland Parish — up to $27B, ~4M sq ft, 2GW. Meta's largest site worldwide; transforming rural NE Louisiana.",
+  drv:"Off the obvious map: a generational megaproject in a small market means outsized demand for traveling/commercial crews.",dx:-16,dy:6},
+ {name:"Jacksonville",st:"FL",city:"Jacksonville",lat:30.33,lng:-81.66,score:58,boom:0,pay:"$24–40/hr",
+  cat:null,drv:"Logistics/port-driven industrial growth; healthcare (Mayo Clinic) expansion.",dx:16,dy:2},
+ {name:"Charleston",st:"SC",city:"Charleston",lat:32.78,lng:-79.93,score:56,boom:0,pay:"$25–40/hr",
+  cat:null,drv:"Port & advanced-manufacturing (auto/aerospace) growth; strong coastal commercial demand.",dx:16,dy:8},
+ {name:"Greensboro / Triad",st:"NC",city:"Greensboro",lat:36.07,lng:-79.79,score:56,boom:1,pay:"$23–40/hr",
+  cat:"Toyota Battery, Liberty NC — $13.9B, 5,000+ jobs, production lines launching through 2030.",
+  drv:"Piedmont Triad megasite anchors a large industrial-construction wave.",dx:6,dy:-13},
+ {name:"Louisville",st:"KY",city:"Louisville",lat:38.25,lng:-85.76,score:52,boom:1,pay:"$24–98/hr",
+  cat:"BlueOval SK Battery Park, Glendale KY (~45 mi south) plus UPS Worldport logistics buildout.",
+  drv:"Battery + logistics anchor steady commercial install backlog.",dx:2,dy:-13},
+ {name:"Jackson / Meridian",st:"MS",city:"Jackson",lat:32.30,lng:-90.18,score:52,boom:1,pay:"$24–40/hr",
+  cat:"Compass 'Meridian' DC campus — $10B, 8 buildings; AWS Vicksburg — $3B (2026 start); plus a Madison County campus. MS drew $13.9B in DC funding in 2025.",
+  drv:"A quiet data-center hotspot — multiple billion-dollar campuses across central MS.",dx:-18,dy:6},
+ {name:"Greenville",st:"SC",city:"Greenville",lat:34.85,lng:-82.39,score:50,boom:0,pay:"$25–40/hr",
+  cat:null,drv:"Upstate manufacturing corridor (BMW, Michelin); steady commercial maintenance & install.",dx:-20,dy:-9},
+ {name:"Columbia",st:"SC",city:"Columbia",lat:34.00,lng:-81.03,score:50,boom:1,pay:"$25–40/hr",
+  cat:"Scout Motors EV plant, Blythewood — new-build campus — plus state-capital institutional construction.",
+  drv:"Capital-city institutional work plus a fresh automotive megasite.",dx:-18,dy:7},
+ {name:"Birmingham",st:"AL",city:"Birmingham",lat:33.52,lng:-86.80,score:52,boom:1,pay:"$24–45/hr",
+  cat:"Alabama data-center surge — Project Marvel (Bessemer, ~1,600 acres / 18 server farms) plus new Birmingham campuses; UAB healthcare anchors institutional work.",
+  drv:"Alabama now has ~27 data centers operating or under construction; Birmingham is a focal point.",dx:-22,dy:6},
+ {name:"Virginia Beach",st:"VA",city:"Virginia Beach",lat:36.85,lng:-76.0,score:42,boom:0,pay:"$25–45/hr",
+  cat:null,drv:"Military/government & port facilities; steady institutional install demand.",dx:18,dy:5},
+ {name:"Knoxville",st:"TN",city:"Knoxville",lat:35.96,lng:-83.92,score:40,boom:0,pay:"$24–45/hr",
+  cat:null,drv:"University & Oak Ridge-area institutional work; growing regional commercial base.",dx:4,dy:-12},
+ {name:"New Orleans",st:"LA",city:"New Orleans",lat:29.95,lng:-90.07,score:38,boom:0,pay:"$23–42/hr",
+  cat:null,drv:"Hospitality, healthcare & port; slower but stable commercial install market.",dx:-2,dy:13},
+ {name:"Dallas–Fort Worth",st:"TX",city:"Dallas",lat:32.78,lng:-96.80,score:92,boom:1,pay:"$25–60/hr",
+  cat:"Top U.S. data-center & industrial market — Yondr 550MW Lancaster campus, DataBank Red Oak expansion; ~28.8M sq ft of industrial under construction.",
+  drv:"Deep, diversified pipeline; #1 in the country for industrial space under construction.",dx:6,dy:-12},
+ {name:"Houston",st:"TX",city:"Houston",lat:29.76,lng:-95.37,score:90,boom:1,pay:"$24–58/hr",
+  cat:"Leads the U.S. in commercial-construction spending (~$90B/yr); petrochemical, manufacturing & warehouse megaprojects.",
+  drv:"One of the largest HVAC markets anywhere — huge industrial/energy build plus healthcare & commercial.",dx:9,dy:6},
+ {name:"Austin",st:"TX",city:"Austin",lat:30.27,lng:-97.74,score:84,boom:1,pay:"$25–55/hr",
+  cat:"~20 data-center projects underway/planned (Sabey Round Rock); Samsung Taylor chip fab and Tesla anchor a fast-growing tech-industrial corridor.",
+  drv:"Among the fastest-growing U.S. markets; semiconductors + data centers drive heavy mechanical demand.",dx:-13,dy:6},
+ {name:"San Antonio",st:"TX",city:"San Antonio",lat:29.42,lng:-98.49,score:74,boom:1,pay:"$24–50/hr",
+  cat:"Rowan 'Cinco' $900M / 300MW data-center campus (Medina Co.); Microsoft cluster, military & manufacturing.",
+  drv:"Established data-center hub with steady institutional and industrial work.",dx:-26,dy:6},
+ {name:"Abilene",st:"TX",city:"Abilene",lat:32.45,lng:-99.73,score:72,boom:1,pay:"$24–46/hr",
+  cat:"Stargate (OpenAI/Oracle/SoftBank) — first AI data-center site live Sept 2025; phase 2 (+1GW, 6 buildings, 450k+ GPUs) energizing mid-2026. A generational project in a small market.",
+  drv:"Off the obvious map: one of the world's largest AI campuses rising in west-central Texas — outsized demand for traveling crews.",dx:2,dy:-12},
+ {name:"El Paso",st:"TX",city:"El Paso",lat:31.76,lng:-106.49,score:50,boom:0,pay:"$22–42/hr",
+  cat:null,drv:"Border manufacturing & logistics (nearshoring) plus Fort Bliss; steady institutional/industrial install demand.",dx:9,dy:-11},
+ {name:"NW Arkansas",st:"AR",city:"Bentonville",lat:36.15,lng:-94.13,score:66,boom:1,pay:"$24–45/hr",
+  cat:"Walmart's new ~$1B+, 350-acre HQ campus (2.4M sq ft) plus Tyson & J.B. Hunt growth; Bentonville grew 73% (2010–24) with permits up 33%.",
+  drv:"A genuine sleeper boom — corporate, healthcare (+18% starts in 2026) and infrastructure all surging.",dx:6,dy:-12},
+ {name:"Little Rock",st:"AR",city:"Little Rock",lat:34.74,lng:-92.29,score:46,boom:0,pay:"$23–45/hr",
+  cat:null,drv:"State capital — healthcare construction and nearby steel/industrial; moderate but steady commercial demand.",dx:-20,dy:6},
+ {name:"Chattanooga",st:"TN",city:"Chattanooga",lat:35.05,lng:-85.31,score:52,boom:0,pay:"$24–45/hr",
+  cat:null,drv:"VW assembly, advanced manufacturing and a growing data-center presence along the I-75 corridor.",dx:8,dy:9},
+ {name:"Mobile",st:"AL",city:"Mobile",lat:30.69,lng:-88.04,score:48,boom:0,pay:"$24–44/hr",
+  cat:null,drv:"Airbus final-assembly line, Austal shipbuilding and port-driven industrial construction.",dx:-12,dy:9},
+ {name:"Baton Rouge",st:"LA",city:"Baton Rouge",lat:30.45,lng:-91.15,score:46,boom:0,pay:"$24–45/hr",
+  cat:null,drv:"Petrochemical/industrial corridor along the Mississippi; steady plant maintenance & install work.",dx:-24,dy:-2}
+];
+
+/* simplified state outlines [lng,lat] */
+const states={
+ TX:[[-103.04,36.5],[-100.0,36.5],[-100.0,34.56],[-99.6,34.2],[-98.1,34.0],[-96.0,33.7],[-94.04,33.6],[-94.04,31.0],[-93.5,29.8],[-95.1,28.9],[-96.6,28.4],[-97.4,27.3],[-97.15,26.0],[-99.1,26.4],[-100.4,28.5],[-101.4,29.8],[-102.5,29.8],[-103.3,29.0],[-104.9,30.6],[-106.5,31.8],[-106.6,32.0],[-103.06,32.0],[-103.04,36.5]],
+ AR:[[-94.62,36.5],[-90.15,36.5],[-89.73,36.0],[-90.35,35.0],[-91.0,34.0],[-91.1,33.0],[-94.04,33.0],[-94.47,34.6],[-94.62,36.5]],
+ KY:[[-89.5,36.5],[-88.1,36.5],[-86.5,36.6],[-84.8,36.6],[-83.7,36.6],[-82.6,37.4],[-82.3,37.6],[-83.0,38.2],[-83.7,38.6],[-84.8,38.1],[-85.4,38.7],[-86.3,38.2],[-87.0,37.9],[-88.0,37.4],[-88.5,37.2],[-89.2,37.0],[-89.5,36.5]],
+ VA:[[-83.7,36.6],[-81.7,36.6],[-79.5,36.55],[-77.3,36.55],[-76.0,36.9],[-75.9,37.6],[-76.5,38.0],[-77.0,38.4],[-77.5,39.0],[-78.4,39.4],[-79.5,39.2],[-80.3,38.5],[-81.7,38.2],[-82.3,37.6],[-82.6,37.4],[-83.7,36.6]],
+ TN:[[-90.3,35.0],[-90.0,36.0],[-89.7,36.5],[-88.0,36.5],[-86.5,36.6],[-84.8,36.6],[-83.7,36.6],[-82.6,36.6],[-81.7,36.6],[-82.0,35.5],[-83.3,35.2],[-84.3,35.0],[-86.8,35.0],[-88.2,35.0],[-90.3,35.0]],
+ NC:[[-84.3,35.0],[-83.3,35.2],[-82.0,35.5],[-81.7,36.6],[-80.0,36.55],[-77.3,36.55],[-75.9,36.55],[-75.5,35.8],[-76.0,35.0],[-76.5,34.6],[-77.9,33.9],[-78.5,33.9],[-79.0,34.2],[-80.8,34.8],[-82.3,35.2],[-83.3,35.0],[-84.3,35.0]],
+ SC:[[-83.3,35.0],[-82.3,35.2],[-80.8,34.8],[-79.0,34.2],[-78.5,33.9],[-79.2,33.2],[-80.4,32.5],[-80.9,32.0],[-81.5,32.5],[-82.5,33.4],[-83.1,34.2],[-83.3,35.0]],
+ GA:[[-85.6,35.0],[-83.3,35.0],[-83.1,34.2],[-82.5,33.4],[-81.5,32.5],[-80.9,32.0],[-81.1,31.5],[-81.4,30.75],[-82.2,30.6],[-84.9,30.7],[-85.0,31.0],[-85.1,32.0],[-85.6,34.0],[-85.6,35.0]],
+ AL:[[-88.2,35.0],[-85.6,35.0],[-85.6,34.0],[-85.1,32.0],[-85.0,31.0],[-87.0,30.5],[-87.6,30.37],[-88.0,30.2],[-88.4,30.4],[-88.2,32.0],[-88.5,35.0],[-88.2,35.0]],
+ MS:[[-90.3,35.0],[-88.5,35.0],[-88.2,32.0],[-88.4,30.4],[-89.6,30.2],[-89.5,31.0],[-91.6,31.0],[-91.2,32.0],[-90.9,33.0],[-90.3,34.2],[-90.3,35.0]],
+ LA:[[-94.0,33.0],[-91.2,33.0],[-91.6,31.0],[-89.6,31.0],[-89.5,30.2],[-90.3,29.1],[-91.3,29.3],[-92.0,29.6],[-93.2,29.8],[-93.8,29.9],[-93.7,31.0],[-94.0,33.0]],
+ FL:[[-87.6,31.0],[-85.0,31.0],[-84.9,30.7],[-82.2,30.6],[-81.4,30.75],[-80.9,29.2],[-80.5,28.5],[-80.05,26.9],[-80.13,25.8],[-80.4,25.2],[-81.1,25.15],[-82.0,26.8],[-82.7,27.9],[-82.8,28.9],[-83.7,29.9],[-84.4,30.0],[-85.0,29.7],[-86.0,30.4],[-87.6,30.37],[-87.6,31.0]]
+};
+const stLabels={TX:[-99.6,31.2],AR:[-92.7,34.9],KY:[-85.3,37.7],VA:[-78.9,37.9],TN:[-87.6,35.8],NC:[-79.3,35.4],SC:[-81.2,33.7],GA:[-83.6,32.6],AL:[-86.8,32.6],MS:[-89.8,32.6],LA:[-92.6,31.3],FL:[-81.7,28.4]};
+
+/* projection */
+const lonMin=-107.0,lonMax=-75.2,latMin=24.4,latMax=39.6,pad=20;
+const midLat=32,cosMid=Math.cos(midLat*Math.PI/180);
+const xRange=(lonMax-lonMin)*cosMid,yRange=(latMax-latMin);
+const W=1000-pad*2,H=560-pad*2,scale=Math.min(W/xRange,H/yRange);
+const offX=pad+(W-xRange*scale)/2,offY=pad+(H-yRange*scale)/2;
+const proj=(lon,lat)=>[(lon-lonMin)*cosMid*scale+offX,(latMax-lat)*scale+offY];
+const color=s=>s>=80?'#ef4444':s>=60?'#f97316':s>=45?'#f59e0b':'#3b82f6';
+const radius=s=>7+(s/100)*22;
+const NS='http://www.w3.org/2000/svg';
+const svg=document.getElementById('map');
+const el=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;};
+
+/* draw states + labels */
+for(const k in states){
+  const d=states[k].map((p,i)=>{const[x,y]=proj(p[0],p[1]);return (i?'L':'M')+x.toFixed(1)+' '+y.toFixed(1);}).join(' ')+' Z';
+  svg.appendChild(el('path',{d,class:'state'}));
+}
+for(const k in stLabels){const[x,y]=proj(...stLabels[k]);const t=el('text',{x,y,class:'slabel'});t.textContent=k;svg.appendChild(t);}
+
+/* star path generator */
+function starPts(cx,cy,r){let p='';for(let i=0;i<10;i++){const ang=Math.PI/5*i-Math.PI/2;const rr=i%2?r*0.42:r;p+=(i?'L':'M')+(cx+rr*Math.cos(ang)).toFixed(1)+' '+(cy+rr*Math.sin(ang)).toFixed(1);}return p+'Z';}
+
+/* draw bubbles */
+const tip=document.getElementById('tip'),mapbox=document.querySelector('.mapbox');
+const bubByName={};
+markets.slice().sort((a,b)=>b.score-a.score).forEach(m=>{
+  const[x,y]=proj(m.lng,m.lat);const c=color(m.score),r=radius(m.score);
+  const g=el('g',{class:'bub'});
+  if(m.boom)g.appendChild(el('circle',{cx:x,cy:y,r:r+4,class:'boomring'}));
+  const mc=el('circle',{cx:x,cy:y,r,fill:c,'fill-opacity':.55,stroke:c,'stroke-width':2,class:'main'});
+  g.appendChild(mc);
+  if(m.boom)g.appendChild(el('path',{d:starPts(x,y,5.5),class:'star'}));
+  else g.appendChild(el('circle',{cx:x,cy:y,r:2.4,fill:'#fff','fill-opacity':.9}));
+  const lt=el('text',{x:x+(m.dx||0),y:y+(m.dy||0),class:'blabel'});lt.textContent=m.name;
+  svg.appendChild(g);svg.appendChild(lt);
+  bubByName[m.name]=mc;
+  g.addEventListener('mousemove',ev=>{const rb=mapbox.getBoundingClientRect();
+    tip.style.display='block';tip.style.left=(ev.clientX-rb.left+12)+'px';tip.style.top=(ev.clientY-rb.top+12)+'px';
+    tip.innerHTML=`<b>${m.name}, ${m.st}</b> — score ${m.score}${m.boom?' ⚡':''}`;});
+  g.addEventListener('mouseleave',()=>tip.style.display='none');
+  g.addEventListener('click',()=>{selectMarket(m.name);});
+});
+
+/* ============ MEGAPROJECT OVERLAY (toggle) ============ */
+const projects=[
+ {name:"Stargate — Abilene, TX",type:"dc",lat:32.45,lng:-99.73,info:"OpenAI/Oracle/SoftBank AI campus · phase 2 +1GW mid-2026"},
+ {name:"Stargate — Milam Co., TX",type:"dc",lat:30.79,lng:-96.97,info:"New Stargate Texas site"},
+ {name:"Meta 'Hyperion' — Richland Parish, LA",type:"dc",lat:32.48,lng:-91.76,info:"Meta · up to $27B · ~2GW · largest Meta site worldwide"},
+ {name:"xAI 'Colossus' — Memphis, TN",type:"dc",lat:35.07,lng:-90.02,info:"xAI · ~$18B · 2GW · 555k GPUs"},
+ {name:"Compass 'Meridian' — Lauderdale Co., MS",type:"dc",lat:32.36,lng:-88.70,info:"$10B · 8 data-center buildings"},
+ {name:"AWS — Vicksburg, MS",type:"dc",lat:32.35,lng:-90.87,info:"AWS · $3B · construction from 2026"},
+ {name:"Project Marvel — Bessemer, AL",type:"dc",lat:33.40,lng:-86.95,info:"AI data center · ~1,600 acres / 18 server farms"},
+ {name:"Yondr — Lancaster (DFW), TX",type:"dc",lat:32.59,lng:-96.78,info:"550MW hyperscale campus"},
+ {name:"Rowan 'Cinco' — Medina Co., TX",type:"dc",lat:29.35,lng:-98.90,info:"$900M · 300MW (near San Antonio)"},
+ {name:"Sabey — Round Rock (Austin), TX",type:"dc",lat:30.51,lng:-97.68,info:"Data-center campus expansion"},
+ {name:"Data Center Alley — Ashburn, VA",type:"dc",lat:39.04,lng:-77.49,info:"World's largest data-center cluster (Loudoun Co.)"},
+ {name:"Hyundai Metaplant — Bryan Co., GA",type:"auto",lat:32.18,lng:-81.40,info:"$7.6B · 16M sq ft · 8,500+ jobs"},
+ {name:"Toyota Battery — Liberty, NC",type:"battery",lat:35.85,lng:-79.57,info:"$13.9B · 5,000+ jobs"},
+ {name:"BlueOval SK — Glendale, KY",type:"battery",lat:37.60,lng:-85.90,info:"Ford/SK battery park"},
+ {name:"BlueOval City — Stanton, TN",type:"battery",lat:35.46,lng:-89.41,info:"SK On battery megasite (~35mi E of Memphis)"},
+ {name:"Scout Motors — Blythewood, SC",type:"auto",lat:34.21,lng:-80.97,info:"VW EV assembly plant"},
+ {name:"Samsung — Taylor, TX",type:"semi",lat:30.57,lng:-97.41,info:"$17B+ semiconductor fab"},
+ {name:"Airbus — Mobile, AL",type:"aero",lat:30.69,lng:-88.04,info:"A320-family final-assembly line"},
+ {name:"Walmart HQ — Bentonville, AR",type:"corp",lat:36.37,lng:-94.21,info:"$1B+ · 350-acre · 2.4M sq ft campus"}
+];
+const PCOLOR={dc:'#38bdf8',battery:'#34d399',auto:'#34d399',semi:'#a78bfa',aero:'#fbbf24',corp:'#fbbf24'};
+const projLayer=el('g',{id:'projLayer'});projLayer.setAttribute('style','display:none');
+const diamond=(cx,cy,r)=>`M${cx} ${cy-r}L${cx+r} ${cy}L${cx} ${cy+r}L${cx-r} ${cy}Z`;
+projects.forEach(p=>{const[x,y]=proj(p.lng,p.lat);const c=PCOLOR[p.type]||'#fbbf24';
+  const g=el('g',{class:'proj'});
+  g.appendChild(el('path',{d:diamond(x,y,5.5),fill:c,'fill-opacity':.92,stroke:'#0b1322','stroke-width':1}));
+  g.addEventListener('mousemove',ev=>{const rb=mapbox.getBoundingClientRect();
+    tip.style.display='block';tip.style.left=(ev.clientX-rb.left+12)+'px';tip.style.top=(ev.clientY-rb.top+12)+'px';
+    tip.innerHTML=`<b>${p.name}</b><br>${p.info}`;});
+  g.addEventListener('mouseleave',()=>tip.style.display='none');
+  projLayer.appendChild(g);});
+svg.appendChild(projLayer);
+document.getElementById('projToggle').addEventListener('change',e=>{
+  projLayer.style.display=e.target.checked?'':'none';
+  document.getElementById('projLegend').classList.toggle('show',e.target.checked);});
+
+/* sidebar ranked list */
+const list=document.getElementById('list');
+markets.slice().sort((a,b)=>b.score-a.score).forEach((m,i)=>{
+  const c=color(m.score);
+  const row=el('div',{class:'row','data-n':m.name});
+  row.innerHTML=`<div class="rank">${i+1}</div>
+    <div class="bar-wrap"><div class="name"><span>${m.name}, ${m.st} ${m.boom?'<span class="bz">⚡</span>':''}</span></div>
+    <div class="bar"><i style="width:${m.score}%;background:${c}"></i></div></div>
+    <div class="score" style="color:${c}">${m.score}</div>`;
+  row.onclick=()=>selectMarket(m.name);
+  list.appendChild(row);
+});
+
+const STATE_AVG={TX:59836,FL:58044,GA:59167,NC:58296,VA:61774,TN:57325,AL:56356,MS:54706,LA:58327,AR:55417,KY:57724,SC:57478};
+const detail=document.getElementById('detail');
+function selectMarket(name){
+  const m=markets.find(x=>x.name===name);const c=color(m.score);
+  document.querySelectorAll('.row').forEach(r=>r.classList.toggle('active',r.dataset.n===name));
+  for(const n in bubByName){const mm=markets.find(x=>x.name===n);
+    bubByName[n].setAttribute('stroke',n===name?'#fff':color(mm.score));
+    bubByName[n].setAttribute('stroke-width',n===name?4:2);}
+  detail.style.display='block';
+  detail.innerHTML=`<h3>${m.name}, ${m.st} ${m.boom?'⚡':''}</h3>
+    <div class="sub">Opportunity score: <b style="color:${c}">${m.score}</b>/100 · typical pay <b>${m.pay}</b></div>
+    <div style="font-size:11.5px;color:var(--good);margin:4px 0 2px">📊 ${m.st} avg pay, all HVAC roles: <b>$${(STATE_AVG[m.st]||0).toLocaleString()}/yr</b> (Salary.com 2026) — commercial install &amp; management trend higher</div>
+    ${m.cat?`<div class="cat"><b>Catalyst:</b> ${m.cat}</div>`:''}
+    <div class="drv">${m.drv}</div>
+    <div class="btnrow">
+      <button class="btn" onclick="searchHere('${m.name}')">🔎 Find live jobs here</button>
+    </div>`;
+  // keep selected location in the search dropdown
+  if(document.getElementById('fLoc'))document.getElementById('fLoc').value=name;
+}
+
+/* ============ SEARCH ============ */
+const fLoc=document.getElementById('fLoc');
+markets.forEach(m=>{const o=document.createElement('option');o.value=m.name;o.textContent=`${m.name}, ${m.st}`;fLoc.appendChild(o);});
+
+function relTime(iso){if(!iso)return '';const d=(Date.now()-new Date(iso))/86400000;
+  if(d<1)return 'today';if(d<2)return 'yesterday';if(d<31)return Math.round(d)+'d ago';return Math.round(d/30)+'mo ago';}
+
+const ROLE_TERMS=['manager','foreman','lead','superintendent','project','install','installation','commercial','service','mechanic','journeyman'];
+function matchScore(title){const t=(title||'').toLowerCase();let s=0;
+  if(t.includes('commercial'))s+=3;if(t.includes('install'))s+=2;
+  if(/manager|superintendent|foreman|lead|project/.test(t))s+=3;
+  if(t.includes('hvac')||t.includes('mechanical'))s+=1;return s;}
+
+/* natural-language parse of the chat box */
+function parseChat(text){
+  const t=text.toLowerCase();const out={};
+  // location
+  let loc=null;
+  for(const m of markets){if(t.includes(m.name.toLowerCase().split(' (')[0].toLowerCase())||t.includes(m.city.toLowerCase())){loc=m.name;break;}}
+  out.loc=loc;
+  // salary
+  let sal=0;const k=t.match(/\$?\s?(\d{2,3})\s?k/);const full=t.match(/\$?\s?(\d{2,3}),?(\d{3})/);
+  if(k)sal=parseInt(k[1])*1000;else if(full)sal=parseInt(full[1]+full[2]);
+  out.sal=sal;
+  // date
+  out.date = /today/.test(t)?'today': /3 ?day|three day/.test(t)?'3days': /week/.test(t)?'week': /month/.test(t)?'month':'';
+  // role keywords (strip location & salary words)
+  let kw=text.replace(/near|in |around|within|over|above|at least|posted|this|past|today|week|month|day[s]?|\$?\d[\d,k]*/gi,' ');
+  for(const m of markets){kw=kw.replace(new RegExp(m.city,'ig'),' ').replace(new RegExp(m.name.split(' (')[0],'ig'),' ');}
+  kw=kw.replace(/\s+/g,' ').trim();
+  out.kw = kw.length>2?kw:null;
+  return out;
+}
+
+function jdate(v){return v==='today'?'today':v==='3days'?'3days':v==='week'?'week':v==='month'?'month':'all';}
+
+async function doSearch(opts){
+  const results=document.getElementById('results');
+  const demo=document.getElementById('demoChk').checked;
+  const m=markets.find(x=>x.name===opts.loc)||markets[0];
+  const kw=opts.kw||document.getElementById('fRole').value;
+  const minSal=opts.sal||parseInt(document.getElementById('fSal').value);
+  const date=opts.date||document.getElementById('fDate').value;
+  const query=`${kw} jobs in ${m.city}, ${m.st}`;
+
+  // interpretation banner
+  const ib=document.getElementById('interp');
+  ib.style.display='block';
+  ib.innerHTML=`Searching: <b>${kw}</b> · ${m.city}, ${m.st}`+(minSal?` · ≥$${(minSal/1000)}k`:'')+(date!=='all'?` · ${({today:'today','3days':'past 3 days',week:'past week',month:'past month'})[date]}`:'');
+
+  document.getElementById('demoFlag').style.display = demo?'block':'none';
+
+  if(demo||!API_KEY){renderJobs(demoJobs(m,kw),minSal);return;}
+
+  results.innerHTML='<div class="status">Searching live postings…</div>';
+  try{
+    const url=`https://jsearch.p.rapidapi.com/search?query=${encodeURIComponent(query)}&page=1&num_pages=2&country=us&date_posted=${jdate(date)}`;
+    const res=await fetch(url,{headers:{'x-rapidapi-key':API_KEY,'x-rapidapi-host':'jsearch.p.rapidapi.com'}});
+    if(!res.ok)throw new Error('HTTP '+res.status+(res.status===429?' (rate limit / quota)':res.status===403?' (key/subscription)':''));
+    const data=await res.json();
+    const jobs=(data.data||[]).map(j=>({
+      title:j.job_title,emp:j.employer_name,city:j.job_city,state:j.job_state,
+      min:j.job_min_salary,max:j.job_max_salary,type:j.job_employment_type,
+      posted:j.job_posted_at_datetime_utc,link:j.job_apply_link||j.job_google_link,
+      remote:j.job_is_remote,salary_period:j.job_salary_period,publisher:j.job_publisher}));
+    if(!jobs.length){results.innerHTML='<div class="status">No live results for that search. Try a broader role or “Any time”.</div>';return;}
+    renderJobs(jobs,minSal);
+  }catch(err){
+    results.innerHTML=`<div class="status">⚠ Live search failed: ${err.message}.<br>
+      If this says CORS or fails from a file, serve the page (e.g. <code>npx serve</code>) or deploy it. Showing demo data below.</div>`;
+    document.getElementById('demoFlag').style.display='block';
+    renderJobs(demoJobs(m,kw),minSal,true);
+  }
+}
+
+function renderJobs(jobs,minSal,append){
+  const results=document.getElementById('results');
+  // salary filter (keep unknown-salary jobs)
+  let list=jobs.filter(j=>!minSal||!j.max||j.max>=minSal||(j.min&&j.min>=minSal)||(!j.min&&!j.max));
+  list.sort((a,b)=>matchScore(b.title)-matchScore(a.title));
+  const html=list.map(j=>{
+    const ms=matchScore(j.title);
+    const sal=(j.min||j.max)?`$${Math.round((j.min||j.max)/1000)}k${j.max&&j.max!==j.min?'–$'+Math.round(j.max/1000)+'k':''}${/year|annual/i.test(j.salary_period||'')?'/yr':''}`:null;
+    return `<div class="jobcard">
+      <div class="jt">${j.title||'HVAC role'}</div>
+      <div class="emp">${j.emp||''}${j.city?' · '+j.city:''}${j.state?', '+j.state:''}${j.remote?' · Remote':''}</div>
+      ${ms>=5?'<div class="match">★ Strong match for your background</div>':''}
+      <div class="meta">
+        ${sal?`<span class="pill sal">${sal}</span>`:'<span class="pill">salary N/A</span>'}
+        ${j.type?`<span class="pill">${j.type.replace('FULLTIME','Full-time').replace('PARTTIME','Part-time')}</span>`:''}
+        ${j.posted?`<span class="pill">${relTime(j.posted)}</span>`:''}
+        ${j.publisher?`<span class="pill">via ${j.publisher}</span>`:''}
+      </div>
+      ${j.link?`<a class="btn" href="${j.link}" target="_blank" rel="noopener">Apply / view →</a>`:''}
+    </div>`;}).join('');
+  results.innerHTML=(append?results.innerHTML:'')+ (html||'<div class="status">No results after filters.</div>');
+}
+
+/* demo data so the UI is always useful */
+function demoJobs(m,kw){
+  const base=[
+    {title:'Commercial HVAC Installation Manager',emp:'Comfort Systems USA',type:'FULLTIME',min:95000,max:130000,salary_period:'YEAR',posted:new Date(Date.now()-2*864e5).toISOString()},
+    {title:'Commercial HVAC Install Foreman',emp:'EMCOR Mechanical',type:'FULLTIME',min:70000,max:95000,salary_period:'YEAR',posted:new Date(Date.now()-1*864e5).toISOString()},
+    {title:'Lead Commercial HVAC Installer',emp:'Daikin Applied',type:'FULLTIME',min:62000,max:85000,salary_period:'YEAR',posted:new Date(Date.now()-4*864e5).toISOString()},
+    {title:'HVAC Project Manager — Commercial',emp:'Trane Technologies',type:'FULLTIME',min:90000,max:120000,salary_period:'YEAR',posted:new Date(Date.now()-3*864e5).toISOString()},
+    {title:'Commercial HVAC Service Manager',emp:'Lennox National Account Services',type:'FULLTIME',min:85000,max:110000,salary_period:'YEAR',posted:new Date(Date.now()-6*864e5).toISOString()},
+    {title:'Data Center Mechanical / HVAC Superintendent',emp:'Holder Construction',type:'FULLTIME',min:100000,max:140000,salary_period:'YEAR',posted:new Date(Date.now()-1*864e5).toISOString()}
+  ];
+  const srcs=['Indeed','LinkedIn','ZipRecruiter','Glassdoor','Google for Jobs','Talent.com'];
+  return base.map((b,i)=>({...b,city:m.city,state:m.st,publisher:srcs[i%srcs.length],link:`https://www.indeed.com/jobs?q=${encodeURIComponent(b.title)}&l=${encodeURIComponent(m.city+', '+m.st)}`}));
+}
+
+window.searchHere=function(name){
+  document.querySelector('.tab[data-tab="search"]').click();
+  document.getElementById('fLoc').value=name;
+  doSearch({loc:name});
+};
+
+/* ============ ANTHROPIC AGENT LAYER ============ */
+let collectedJobs=[];
+let convo=[];
+const MARKET_BRIEF = markets.map(m=>({name:m.name,state:m.st,city:m.city,score:m.score,boom:!!m.boom,pay:m.pay,catalyst:m.cat||undefined}));
+const TOOLS=[{
+  name:"search_jobs",
+  description:"Search live job postings via JSearch — a meta-aggregator covering Indeed, LinkedIn, ZipRecruiter, Glassdoor and Google for Jobs. Returns up to ~12 current openings for a role + location, each with its source board.",
+  input_schema:{type:"object",properties:{
+    query:{type:"string",description:"Role/keywords, e.g. 'commercial HVAC install manager'."},
+    location:{type:"string",description:"City and state, e.g. 'Memphis, TN'."},
+    date_posted:{type:"string",enum:["all","today","3days","week","month"],description:"Recency filter; default 'week'."},
+    min_salary:{type:"number",description:"Optional annual minimum salary (USD)."}
+  },required:["query","location"]}
+}];
+const SYSTEM=`You are the assistant inside Chris's Commercial HVAC Job Finder.
+
+CANDIDATE (target and rank every search around this):
+- ~20 years in COMMERCIAL HVAC installation, including management/leadership.
+- Best-fit titles: Commercial HVAC Installation Manager, HVAC Project Manager, Install Superintendent, Foreman, Lead Installer, Commercial Installer, Service Manager.
+- Strong fit for new-construction, data-center, industrial and large-commercial mechanical work.
+- Open to relocation/travel for strong opportunities (especially the boom markets below) — but always honor any location the user names.
+
+MARKET INTELLIGENCE (Southeast + Texas + Arkansas; score 0–100 = opportunity strength; boom = driven by a named megaproject — data center, EV/battery, semiconductor or aerospace):
+${JSON.stringify(MARKET_BRIEF)}
+
+BLS PAY CONTEXT: HVAC mechanics (SOC 49-9021) national median $59,810/yr ($28.75/hr), projected +8% growth 2024–34; commercial install & management pay above that. Southeast/Texas state averages ~$55k–$62k/yr.
+
+HOW TO SEARCH:
+- search_jobs queries JSearch, a meta-aggregator that pulls postings from Indeed, LinkedIn, ZipRecruiter, Glassdoor, Google for Jobs and other boards in one call.
+- Interpret the request, pick the best titles and market(s) from the intelligence above, and call search_jobs up to 3 times (to compare markets or widen titles). Pull broadly, then keep the most relevant to the candidate.
+- If the user is vague, choose sensibly from the market data (favor high-score and boom markets) instead of asking many questions.
+
+HOW TO RESPOND:
+- Short, concrete summary: name the strongest matches and why they fit Chris, with pay and the source site where known.
+- Mention which job boards the results came from. Keep replies tight.`;
+
+function escapeHtml(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function mdLite(s){return escapeHtml(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/^[-*] (.*)$/gm,'• $1').replace(/\n/g,'<br>');}
+function addBubble(kind,html){const log=document.getElementById('chatlog');const d=document.createElement('div');d.className='bubble '+kind;d.innerHTML=html;log.appendChild(d);log.scrollTop=log.scrollHeight;return d;}
+function dedupe(arr){const seen=new Set();return arr.filter(j=>{const k=(j.link||'')+'|'+(j.title||'')+'|'+(j.emp||'');if(seen.has(k))return false;seen.add(k);return true;});}
+function demoForLoc(location){const city=(location||'').split(',')[0].trim().toLowerCase();
+  const m=markets.find(x=>x.city.toLowerCase()===city)||markets.find(x=>location&&location.toLowerCase().includes(x.city.toLowerCase()))||markets[0];
+  return demoJobs(m,'commercial HVAC');}
+
+async function fetchJSearch(query,date,pages){
+  if(!API_KEY)throw new Error('No JSearch key set');
+  const url=`https://jsearch.p.rapidapi.com/search?query=${encodeURIComponent(query)}&page=1&num_pages=${pages||2}&country=us&date_posted=${jdate(date)}`;
+  const res=await fetch(url,{headers:{'x-rapidapi-key':API_KEY,'x-rapidapi-host':'jsearch.p.rapidapi.com'}});
+  if(!res.ok)throw new Error('JSearch HTTP '+res.status);
+  const data=await res.json();
+  return (data.data||[]).map(j=>({title:j.job_title,emp:j.employer_name,city:j.job_city,state:j.job_state,
+    min:j.job_min_salary,max:j.job_max_salary,type:j.job_employment_type,posted:j.job_posted_at_datetime_utc,
+    link:j.job_apply_link||j.job_google_link,remote:j.job_is_remote,salary_period:j.job_salary_period,publisher:j.job_publisher}));
+}
+
+async function anthropicCall(messages){
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'content-type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:MODEL,max_tokens:1024,system:SYSTEM,tools:TOOLS,messages})
+  });
+  if(!res.ok){let t='';try{t=await res.text();}catch(e){}
+    const hint=res.status===401?' (check Anthropic key)':res.status===429?' (rate limit / credits)':res.status===0?' (CORS — serve the page or deploy it)':'';
+    throw new Error('Claude HTTP '+res.status+hint);}
+  return res.json();
+}
+
+async function runAgent(userText){
+  addBubble('user',escapeHtml(userText));
+  convo.push({role:'user',content:userText});
+  const thinking=addBubble('tool','🤔 Thinking…');
+  collectedJobs=[];
+  const demo=document.getElementById('demoChk').checked;
+  document.getElementById('demoFlag').style.display=demo?'block':'none';
+  try{
+    for(let i=0;i<4;i++){
+      const r=await anthropicCall(convo);
+      const toolUses=(r.content||[]).filter(b=>b.type==='tool_use');
+      const text=(r.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim();
+      convo.push({role:'assistant',content:r.content});
+      if(!toolUses.length){thinking.remove();if(text)addBubble('ai',mdLite(text));break;}
+      const toolResults=[];
+      for(const tu of toolUses){
+        const inp=tu.input||{};
+        thinking.innerHTML=`🔎 Searching: ${escapeHtml(inp.query||'')} · ${escapeHtml(inp.location||'')}`;
+        let jobs=[];
+        try{jobs=demo?demoForLoc(inp.location):await fetchJSearch(`${inp.query} in ${inp.location}`,inp.date_posted||'week',2);}catch(e){}
+        if(inp.min_salary)jobs=jobs.filter(j=>!j.max||j.max>=inp.min_salary||(j.min&&j.min>=inp.min_salary)||(!j.min&&!j.max));
+        jobs=jobs.slice(0,12);collectedJobs.push(...jobs);
+        toolResults.push({type:'tool_result',tool_use_id:tu.id,
+          content:JSON.stringify(jobs.map(j=>({title:j.title,employer:j.emp,location:(j.city||'')+(j.state?', '+j.state:''),
+            salary:(j.min||j.max)?('$'+Math.round((j.min||j.max)/1000)+'k'):'N/A',posted:relTime(j.posted),source:j.publisher||'web'})))||'[]'});
+      }
+      convo.push({role:'user',content:toolResults});
+      renderJobs(dedupe(collectedJobs),0);
+      if(i===3){thinking.remove();}
+    }
+  }catch(err){thinking.remove();addBubble('ai','⚠ '+escapeHtml(err.message));convo=[];}
+  if(convo.length>24)convo=[];
+}
+
+function updateChatHint(){const h=document.getElementById('chatHint');if(!h)return;
+  h.innerHTML=ANTHROPIC_KEY
+    ? '🧠 Claude interprets your request, picks markets from the map, and pulls live JSearch results.'
+    : '⚠ No Anthropic key yet — using basic keyword parsing. Add a key via ⚙ Keys for full natural-language chat.';}
+
+/* wire controls */
+document.getElementById('runSearch').onclick=()=>doSearch({loc:fLoc.value});
+document.getElementById('chatGo').onclick=()=>{
+  const v=document.getElementById('chatInput').value.trim();if(!v)return;
+  if(ANTHROPIC_KEY){runAgent(v);document.getElementById('chatInput').value='';return;}
+  const p=parseChat(v);
+  if(p.loc)fLoc.value=p.loc;if(p.sal)document.getElementById('fSal').value=String(p.sal);if(p.date)document.getElementById('fDate').value=p.date;
+  doSearch({loc:p.loc||fLoc.value,kw:p.kw,sal:p.sal,date:p.date});};
+document.getElementById('chatInput').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('chatGo').click();});
+
+/* tabs */
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.pane').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');document.getElementById('pane-'+t.dataset.tab).classList.add('active');
+});
+
+/* key modal */
+const km=document.getElementById('keyModal');
+document.getElementById('keyBtn').onclick=()=>{
+  document.getElementById('keyInput').value=API_KEY;
+  document.getElementById('antInput').value=ANTHROPIC_KEY;
+  document.getElementById('modelSel').value=MODEL;
+  km.classList.add('open');};
+document.getElementById('keyCancel').onclick=()=>km.classList.remove('open');
+document.getElementById('keySave').onclick=()=>{
+  API_KEY=document.getElementById('keyInput').value.trim();
+  ANTHROPIC_KEY=document.getElementById('antInput').value.trim();
+  MODEL=document.getElementById('modelSel').value;
+  localStorage.setItem('jsearch_key',API_KEY);
+  localStorage.setItem('anthropic_key',ANTHROPIC_KEY);
+  localStorage.setItem('anthropic_model',MODEL);
+  km.classList.remove('open');updateChatHint();};
+
+/* init */
+selectMarket('N. Virginia (Ashburn)');
+updateChatHint();
+</script>
+</body>
+</html>

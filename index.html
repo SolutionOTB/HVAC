@@ -159,7 +159,7 @@
   <h1>🔧 Commercial HVAC Job Finder</h1>
   <span class="chip">Profile: <b>Chris</b> · 20 yrs commercial HVAC installation + management</span>
   <span class="spacer"></span>
-  <span class="ver">build v8 · keys live</span>
+  <span class="ver">build v9 · raw errors</span>
 </header>
 <div class="wrap">
   <div class="mapbox">
@@ -676,8 +676,7 @@ async function anthropicCall(messages){
     body:JSON.stringify({model:MODEL,max_tokens:1024,system:SYSTEM,tools:TOOLS,messages})
   });
   if(!res.ok){let t='';try{t=await res.text();}catch(e){}
-    const hint=res.status===401?' (check Anthropic key)':res.status===429?' (rate limit / credits)':res.status===0?' (CORS — serve the page or deploy it)':'';
-    throw new Error('Claude HTTP '+res.status+hint);}
+    throw new Error('Claude HTTP '+res.status+(t?(' — '+t.slice(0,300)):''));}
   return res.json();
 }
 

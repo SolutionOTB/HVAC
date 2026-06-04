@@ -41,6 +41,18 @@
   .projlegend span{display:flex;align-items:center;gap:6px}
   .projlegend i{width:9px;height:9px;transform:rotate(45deg);display:inline-block}
   .proj path:hover{stroke:#fff;stroke-width:1.5}
+  #detail ul.ovr{margin:7px 0 4px 16px;padding:0}
+  #detail ul.ovr li{font-size:12px;margin:3px 0;line-height:1.45}
+  details.acc{margin:9px 0;border:1px solid var(--line);border-radius:8px;background:var(--panel2);overflow:hidden}
+  details.acc summary{cursor:pointer;padding:8px 10px;font-size:12px;font-weight:600;list-style:none}
+  details.acc summary::-webkit-details-marker{display:none}
+  details.acc summary:before{content:'▸ ';color:var(--accent)}
+  details.acc[open] summary:before{content:'▾ '}
+  .accbody{padding:3px 10px 9px}
+  .acch{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:8px 0 3px}
+  .accitem{display:flex;align-items:center;gap:7px;font-size:11.5px;padding:4px 0;border-bottom:1px solid #ffffff12;text-decoration:none;color:var(--text)}
+  .accitem.lnk{color:var(--accent);font-weight:600}
+  .pdot{width:8px;height:8px;border-radius:50%;flex:none}
   aside{width:430px;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
   .tabs{display:flex;border-bottom:1px solid var(--line)}
   .tab{flex:1;text-align:center;padding:11px 6px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
@@ -187,8 +199,8 @@
         <div><label>Posted</label>
           <select id="fDate">
             <option value="all">Any time</option><option value="today">Today</option>
-            <option value="3days">Past 3 days</option><option value="week" selected>Past week</option>
-            <option value="month">Past month</option></select></div>
+            <option value="3days">Past 3 days</option><option value="week">Past week</option>
+            <option value="month" selected>Past month</option></select></div>
         <div class="full"><button class="btn" id="runSearch" style="width:100%">Find jobs</button>
           <label class="ck"><input type="checkbox" id="demoChk"> Use demo data (no API call)</label>
         </div>
@@ -223,13 +235,15 @@
 
 <script>
 /* ============ DEFAULT KEY (yours; editable & stored locally) ============ */
-const DEFAULT_KEY = "cd5bcb0c47mshc997e48bd90f9b6p1cd7dcjsn37d474e5d96a";
-/* ↓↓↓  PASTE YOUR ANTHROPIC KEY BETWEEN THE QUOTES TO MAKE IT PERMANENT (it starts with sk-ant-)  ↓↓↓ */
-const DEFAULT_ANT_KEY = "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";
-/* ↑↑↑  Keep this file private — do NOT post it publicly with a key in it. Set a spend limit in the Anthropic console.  ↑↑↑ */
-let API_KEY = localStorage.getItem('jsearch_key') || DEFAULT_KEY;
-let ANTHROPIC_KEY = localStorage.getItem('anthropic_key') || DEFAULT_ANT_KEY;
-let MODEL = localStorage.getItem('anthropic_model') || "claude-haiku-4-5-20251001";
+/* ============================  YOUR API KEYS  ============================
+   Paste each key between the quotes. THIS IS THE ONLY PLACE keys are set.
+     ANTHROPIC_KEY = the chat brain  (starts with sk-ant-)
+     API_KEY       = your RapidAPI JSearch key (job listings)
+   Keep this file private — the keys are readable inside it.              */
+let ANTHROPIC_KEY = "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";
+let API_KEY       = "cd5bcb0c47mshc997e48bd90f9b6p1cd7dcjsn37d474e5d96a";
+let MODEL         = "claude-haiku-4-5-20251001";
+/* ======================================================================== */
 
 /* ============ MARKET DATA ============ */
 const markets=[
@@ -437,6 +451,9 @@ markets.slice().sort((a,b)=>b.score-a.score).forEach((m,i)=>{
 
 const STATE_AVG={TX:59836,FL:58044,GA:59167,NC:58296,VA:61774,TN:57325,AL:56356,MS:54706,LA:58327,AR:55417,KY:57724,SC:57478};
 const detail=document.getElementById('detail');
+function nearbyProjects(m){return projects.filter(p=>{const dLat=p.lat-m.lat,dLng=(p.lng-m.lng)*Math.cos(m.lat*Math.PI/180);return Math.sqrt(dLat*dLat+dLng*dLng)<1.7;});}
+const EMPLOYERS=['Comfort Systems USA','EMCOR','Trane Technologies','Daikin Applied','Lennox National Account Services','Limbach','Holder Construction','DPR Construction'];
+function jobLink(co,m){return `https://www.indeed.com/jobs?q=${encodeURIComponent(co+' HVAC')}&l=${encodeURIComponent(m.city+', '+m.st)}`;}
 function selectMarket(name){
   const m=markets.find(x=>x.name===name);const c=color(m.score);
   document.querySelectorAll('.row').forEach(r=>r.classList.toggle('active',r.dataset.n===name));
@@ -444,11 +461,24 @@ function selectMarket(name){
     bubByName[n].setAttribute('stroke',n===name?'#fff':color(mm.score));
     bubByName[n].setAttribute('stroke-width',n===name?4:2);}
   detail.style.display='block';
+  const near=nearbyProjects(m);
+  const tier=m.score>=80?'Hottest':m.score>=60?'High':m.score>=45?'Moderate':'Lower';
   detail.innerHTML=`<h3>${m.name}, ${m.st} ${m.boom?'⚡':''}</h3>
     <div class="sub">Opportunity score: <b style="color:${c}">${m.score}</b>/100 · typical pay <b>${m.pay}</b></div>
-    <div style="font-size:11.5px;color:var(--good);margin:4px 0 2px">📊 ${m.st} avg pay, all HVAC roles: <b>$${(STATE_AVG[m.st]||0).toLocaleString()}/yr</b> (Salary.com 2026) — commercial install &amp; management trend higher</div>
-    ${m.cat?`<div class="cat"><b>Catalyst:</b> ${m.cat}</div>`:''}
-    <div class="drv">${m.drv}</div>
+    <ul class="ovr">
+      <li><b>Opportunity:</b> ${tier} tier (${m.score}/100)${m.boom?' · ⚡ boom market':''}</li>
+      <li><b>Pay:</b> ${m.pay} · ${m.st} avg <b>$${(STATE_AVG[m.st]||0).toLocaleString()}/yr</b> (install &amp; management trend higher)</li>
+      ${m.cat?`<li><b>Driving demand:</b> ${m.cat}</li>`:''}
+      <li>${m.drv}</li>
+    </ul>
+    <details class="acc">
+      <summary>🏗 Projects &amp; companies hiring HVAC near ${m.city} (${near.length+EMPLOYERS.length})</summary>
+      <div class="accbody">
+        ${near.length?`<div class="acch">Active megaprojects nearby</div>`+near.map(p=>`<div class="accitem"><span class="pdot" style="background:${PCOLOR[p.type]||'#fbbf24'}"></span><span>${p.name} — ${p.info}</span></div>`).join(''):''}
+        <div class="acch">Major commercial-HVAC employers — check openings</div>
+        ${EMPLOYERS.map(co=>`<a class="accitem lnk" href="${jobLink(co,m)}" target="_blank" rel="noopener">${co} →</a>`).join('')}
+      </div>
+    </details>
     <div class="btnrow">
       <button class="btn" onclick="searchHere('${m.name}')">🔎 Find live jobs here</button>
     </div>`;
@@ -499,7 +529,7 @@ async function doSearch(opts){
   const kw=opts.kw||document.getElementById('fRole').value;
   const minSal=opts.sal||parseInt(document.getElementById('fSal').value);
   const date=opts.date||document.getElementById('fDate').value;
-  const query=`${kw} jobs in ${m.city}, ${m.st}`;
+  const query=`${kw} in ${m.city}, ${m.st}`;
 
   // interpretation banner
   const ib=document.getElementById('interp');
@@ -709,9 +739,6 @@ document.getElementById('keySave').onclick=()=>{
   API_KEY=document.getElementById('keyInput').value.trim();
   ANTHROPIC_KEY=document.getElementById('antInput').value.trim();
   MODEL=document.getElementById('modelSel').value;
-  localStorage.setItem('jsearch_key',API_KEY);
-  localStorage.setItem('anthropic_key',ANTHROPIC_KEY);
-  localStorage.setItem('anthropic_model',MODEL);
   km.classList.remove('open');updateChatHint();};
 
 /* init */

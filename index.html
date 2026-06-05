@@ -159,7 +159,7 @@
   <h1>🔧 Commercial HVAC Job Finder</h1>
   <span class="chip">Profile: <b>Chris</b> · 20 yrs commercial HVAC installation + management</span>
   <span class="spacer"></span>
-  <span class="ver">build v9 · raw errors</span>
+  <span class="ver">build v11 · proxy</span>
 </header>
 <div class="wrap">
   <div class="mapbox">
@@ -244,16 +244,17 @@
 </div>
 
 <script>
-/* ============ DEFAULT KEY (yours; editable & stored locally) ============ */
-/* ============================  YOUR API KEYS  ============================
-   Paste each key between the quotes. THIS IS THE ONLY PLACE keys are set.
-     ANTHROPIC_KEY = the chat brain  (starts with sk-ant-)
-     API_KEY       = your RapidAPI JSearch key (job listings)
-   Keep this file private — the keys are readable inside it.              */
-let ANTHROPIC_KEY = "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";
+/* ============================  CONFIG  ============================
+   The Anthropic key is NOT in this file. It lives on a Cloudflare Worker
+   proxy (so it can never be exposed or auto-revoked). Deploy the worker
+   from "hvac-chat-proxy-worker.js" (see the deploy guide), then paste its
+   URL below. Leave "" to use basic keyword search with no AI chat.
+     BACKEND_URL = your Cloudflare Worker URL (e.g. https://xxx.workers.dev)
+     API_KEY     = your RapidAPI JSearch key (job listings)              */
+const BACKEND_URL = "";
 let API_KEY       = "cd5bcb0c47mshc997e48bd90f9b6p1cd7dcjsn37d474e5d96a";
 let MODEL         = "claude-haiku-4-5-20251001";
-/* ======================================================================== */
+/* ================================================================== */
 
 /* ============ MARKET DATA ============ */
 const markets=[
@@ -670,13 +671,14 @@ async function fetchJSearch(query,date,pages){
 }
 
 async function anthropicCall(messages){
-  const res=await fetch('https://api.anthropic.com/v1/messages',{
+  if(!BACKEND_URL)throw new Error('No BACKEND_URL set — paste your Cloudflare Worker URL at the top of this file.');
+  const res=await fetch(BACKEND_URL,{
     method:'POST',
-    headers:{'content-type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    headers:{'content-type':'application/json'},
     body:JSON.stringify({model:MODEL,max_tokens:1024,system:SYSTEM,tools:TOOLS,messages})
   });
   if(!res.ok){let t='';try{t=await res.text();}catch(e){}
-    throw new Error('Claude HTTP '+res.status+(t?(' — '+t.slice(0,300)):''));}
+    throw new Error('Proxy HTTP '+res.status+(t?(' — '+t.slice(0,300)):''));}
   return res.json();
 }
 
@@ -715,26 +717,24 @@ async function runAgent(userText){
 }
 
 function updateChatHint(){const h=document.getElementById('chatHint');if(!h)return;
-  h.innerHTML=ANTHROPIC_KEY
+  h.innerHTML=BACKEND_URL
     ? '🧠 Claude interprets your request, picks markets from the map, and pulls live JSearch results.'
-    : '⚠ No Anthropic key embedded — using basic keyword parsing.';}
+    : '⚠ No BACKEND_URL set — using basic keyword parsing. Add your Cloudflare Worker URL for full AI chat.';}
 
 /* ====== built-in diagnostic: tells you exactly what's wrong ====== */
 async function testConnections(){
   document.querySelector('.tab[data-tab="search"]').click();
   addBubble('tool','🔧 Testing both connections…');
-  // 1) Anthropic (chat brain)
-  if(!ANTHROPIC_KEY){addBubble('ai','❌ <b>Claude:</b> no key is embedded in this file.');}
+  // 1) Claude via the Cloudflare Worker proxy
+  if(!BACKEND_URL){addBubble('ai','❌ <b>Claude:</b> no BACKEND_URL set — paste your Cloudflare Worker URL at the top of the file.');}
   else{
     try{
-      const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
-        headers:{'content-type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      const r=await fetch(BACKEND_URL,{method:'POST',headers:{'content-type':'application/json'},
         body:JSON.stringify({model:MODEL,max_tokens:1,messages:[{role:'user',content:'hi'}]})});
-      if(r.ok){addBubble('ai','✅ <b>Claude (chat):</b> connected — key & credits OK.');}
-      else{const j=await r.json().catch(()=>({}));const m=j.error&&j.error.message?j.error.message:('HTTP '+r.status);
-        const hint=r.status===400?' → usually means NO CREDITS on the account (add a few $ at console.anthropic.com → Billing).':r.status===401?' → the key was rejected (re-check it).':'';
-        addBubble('ai','❌ <b>Claude:</b> '+escapeHtml(m)+hint);}
-    }catch(e){addBubble('ai','❌ <b>Claude:</b> the request was blocked (network/CORS). This file is running as a <b>local file</b> — that\'s the problem. Host it or open it through a local web server.');}
+      if(r.ok){addBubble('ai','✅ <b>Claude (chat):</b> connected through your Worker proxy.');}
+      else{let t='';try{t=await r.text();}catch(e){}
+        addBubble('ai','❌ <b>Claude proxy:</b> HTTP '+r.status+(t?(' — '+escapeHtml(t.slice(0,200))):'')+(r.status===401?' (the Worker\'s ANTHROPIC_KEY secret is wrong/missing)':r.status===404?' (Worker URL is wrong)':''));}
+    }catch(e){addBubble('ai','❌ <b>Claude proxy:</b> couldn\'t reach the Worker URL — check it\'s deployed and the URL is exact.');}
   }
   // 2) JSearch (job listings)
   try{
@@ -751,7 +751,7 @@ document.getElementById('runSearch').onclick=()=>doSearch({loc:fLoc.value});
 document.getElementById('testBtn').onclick=testConnections;
 document.getElementById('chatGo').onclick=()=>{
   const v=document.getElementById('chatInput').value.trim();if(!v)return;
-  if(ANTHROPIC_KEY){runAgent(v);document.getElementById('chatInput').value='';return;}
+  if(BACKEND_URL){runAgent(v);document.getElementById('chatInput').value='';return;}
   const p=parseChat(v);
   if(p.loc)fLoc.value=p.loc;if(p.sal)document.getElementById('fSal').value=String(p.sal);if(p.date)document.getElementById('fDate').value=p.date;
   doSearch({loc:p.loc||fLoc.value,kw:p.kw,sal:p.sal,date:p.date});};
